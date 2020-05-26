@@ -1,0 +1,54 @@
+---
+# tasks file for ansible-ldap_alta_grupo
+
+  - name: Registro variables locales
+    set_fact:
+      groupname: "{{variables_roles.ldap_alta_grupo.groupname}}"
+      delegacion: "{{variables_roles.ldap_alta_grupo.delegacion}}"
+      when: 
+        - variables_roles.ldap_alta_grupo.groupname != ''
+        - variables_roles.ldap_alta_grupo.delegacion != ''
+
+  - name: incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  - name: Obtengo el siguiente gid libre
+    shell: 'echo $( expr $(ldapsearch -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b \
+           "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(objectclass=posixGroup)" gidNumber \
+           | grep gidNumber\: \
+           | cut -d  " " -f2 \
+           | sort -nu \
+           | tail -n1) + 1)'
+    register: siguiente_gid_libre
+    when: 
+      - grupo_encontrado is defined
+      - grupo_encontrado.rc is defined
+      - grupo_encontrado.rc != 0
+
+  - name: gidNumber
+    debug: msg="{{siguiente_gid_libre.stdout}}"
+    when:  siguiente_gid_libre.stdout is defined
+
+  - name: inserto grupo ldap
+    ldap_entry:
+      params: "{{ ldap_auth }}"
+      dn: cn={{ groupname }},ou=grupos,ou={{ variables_roles.ldap_alta_grupo.delegacion }},dc=ldap-server,dc=issys,dc=gov,dc=ar
+      objectClass: 
+        - top
+        - posixGroup
+      attributes:
+        cn: "{{ groupname }}"
+        gidNumber: "{{ siguiente_gid_libre.stdout }}"
+        description: "{{ variables_roles.ldap_alta_grupo.description }}"
+    when: 
+      - grupo_encontrado is defined
+      - grupo_encontrado.rc is defined
+      - grupo_encontrado.rc != 0
+      - groupname is defined 
+      - siguiente_gid_libre is defined 
+      - variables_roles.ldap_alta_grupo.delegacion != ''
+      - variables_roles.ldap_alta_grupo.description != ''
+

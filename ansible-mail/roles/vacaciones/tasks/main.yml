@@ -1,0 +1,66 @@
+---
+
+  - name: Name for set_fact module.
+    set_fact:
+      user_mail_path: correos_no_personales
+    when: variables_roles.vacaciones.alta.personal == false or variables_roles.vacaciones.baja.personal == false
+
+
+  - name: Name for set_fact module.
+    set_fact:
+      user_mail_path: usuarios
+    when: variables_roles.vacaciones.alta.personal == true or variables_roles.vacaciones.baja.personal == true
+
+  # ====================================================================================================
+  # ====================================================================================================
+
+  - name: alta_vacaciones
+    block:
+
+      - name: Borrar el archivo main script.svbin 
+        file:
+          path: "/produccion/{{user_mail_path}}/{{variables_roles.vacaciones.alta.username}}/sieve/main script.svbin"
+          state: absent
+
+      - name: copiar vacaciones.sieve
+        template:
+          src: "vacaciones.j2"
+          dest: "/produccion/{{user_mail_path}}/{{variables_roles.vacaciones.alta.username}}/sieve/vacaciones.sieve"
+
+      - name: insertar "vacaciones" en main script.sieve
+        lineinfile: 
+          path: "/produccion/{{user_mail_path}}/{{variables_roles.vacaciones.alta.username}}/sieve/main script.sieve"
+          line: 'include :personal "vacaciones";'
+          state: present
+
+    when:
+      - variables_roles.vacaciones.alta.username is defined
+      - variables_roles.vacaciones.alta.username != none
+      - variables_roles.vacaciones.alta.subject is defined
+      - variables_roles.vacaciones.alta.subject != none
+      - variables_roles.vacaciones.alta.mensaje is defined
+      - variables_roles.vacaciones.alta.mensaje != none
+
+  # ====================================================================================================
+  # ====================================================================================================
+
+  - name: baja_vacaciones
+    block:
+
+      - name: Borrar archivos
+        file:
+          path: "/produccion/{{user_mail_path}}/{{variables_roles.vacaciones.baja.username}}/sieve/{{item}}"
+          state: absent
+        with_items: 
+          - "main script.svbin"
+          - "vacaciones.sieve"
+
+      - name: editar en main script.sieve retirar la linea con include :personal "vacaciones";
+        lineinfile: 
+          path: "/produccion/{{user_mail_path}}/{{variables_roles.vacaciones.baja.username}}/sieve/main script.sieve"
+          line: 'include :personal "vacaciones";'
+          state: absent
+    
+    when:
+      - variables_roles.vacaciones.baja.username is defined
+      - variables_roles.vacaciones.baja.username != none

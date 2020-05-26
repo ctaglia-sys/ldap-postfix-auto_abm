@@ -1,0 +1,18 @@
+---
+# defaults file for ansible-ldap
+# ldap_server: "ldap-server.issys.gov.ar"
+# ldap_server: "{{ ansible_host }}"
+# ldap_auth:
+#   bind_dn: 
+#   bind_pw:
+
+# sambaSID: S-1-5-21-2797552002-818222531-1877314704-513
+
+sambaSID: {
+  rawson: 'S-1-5-21-2797552002-818222531-1877314704', 
+  trelew: 'S-1-5-21-3026268986-1401208706-2326694925', 
+  madryn: 'S-1-5-21-760592226-3434879729-1101951575'
+}
+
+# Si no encuentro grupo este es el numero base de grupo
+default_gid: 800

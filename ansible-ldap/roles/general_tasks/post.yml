@@ -1,0 +1,9 @@
+  # Ejecutar sss_cache -u
+- name: limpiar cache del sssd - usuario
+  shell: 'sss_cache -u {{username}}'
+  ignore_errors: true   
+  args:
+    executable: /bin/bash
+  when: 
+    - username is defined
+    - username != ''

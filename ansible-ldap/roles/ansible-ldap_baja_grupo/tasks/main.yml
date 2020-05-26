@@ -1,0 +1,32 @@
+---
+  - name: Registro variables locales
+    set_fact:
+      groupname: "{{variables_roles.ldap_baja_grupo.groupname}}"
+      delegacion: "{{variables_roles.ldap_baja_grupo.delegacion}}"
+      when: 
+        - variables_roles.ldap_baja_grupo.groupname != ''
+        - variables_roles.ldap_baja_grupo.delegacion != ''
+  
+  # tasks file for ansible-ldap_baja_grupo
+  - name: incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  # - name: deb
+  #   debug: msg="{{grupo_encontrado.stdout.split(' ')[1]}}"
+  #   when: 
+  #     - grupo_encontrado is defined
+  #     - grupo_encontrado.rc is defined
+  #     - grupo_encontrado.rc == 0
+      
+  - name: Elimino el grupo
+    ldap_entry:
+      params: "{{ ldap_auth }}"
+      dn: "{{ grupo_encontrado.stdout.split(' ')[1] }}"
+      state: absent
+    when: 
+      - grupo_encontrado is defined
+      - grupo_encontrado.rc is defined
+      - grupo_encontrado.rc == 0

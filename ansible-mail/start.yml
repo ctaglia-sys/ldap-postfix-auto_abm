@@ -1,0 +1,80 @@
+# Se deben completar las variables correspondientes a la 
+# accion/es a realizar (alta_cuenta, baja_cuenta, vacaiones, listas, vacaciones [alta, baja])
+
+# Se debe declarar en /etc/ansible/hosts
+# la entrada para ldap-server.issys.gov.ar y sus credenciales
+# ya que son usadas para el rol que da de baja las cuentas de mail
+
+- name: Administracion servicios - Mail
+  
+  # Se debe declarar en /etc/ansible/hosts
+  # la entrada para mail.issys.gov.ar y sus credenciales
+  # 
+  # hosts: 'mail_server'
+  hosts: 'mail_testing'
+  gather_facts: false
+  vars_files: 
+    - roles/general_defaults/variables_roles.yml
+  
+  tasks:
+
+    # -----------------------------------------------
+    #         Tareas en el server de Mail
+    # -----------------------------------------------
+    - name: "-include_role- alta-baja-cuenta"
+      include_role:
+        name: "alta-baja-cuenta"
+      when: 
+        (variables_roles.alta_cuenta.username is defined and 
+        variables_roles.alta_cuenta.username != none) or
+        (variables_roles.baja_cuenta.username is defined and 
+        variables_roles.baja_cuenta.username != none)
+# ====================================================================
+    - name: "-include_role- alta-baja-listas-correo"
+      include_role:
+        name: "alta-baja-listas-correo"
+      when: 
+        - variables_roles.listas.username is defined
+        - variables_roles.listas.username != none
+# ====================================================================
+    - name: "-include_role- alta-baja-cuenta"
+      include_role:
+        name: "vacaciones"
+      when: 
+        (variables_roles.vacaciones.alta.username is defined and 
+        variables_roles.vacaciones.alta.username != none) or
+        (variables_roles.vacaciones.baja.username is defined and 
+        variables_roles.vacaciones.baja.username != none)
+# ====================================================================
+    
+      # TODO:
+      #   - AB-forwards
+      #   - AB-alias 
+      #   - AB-listas 
+
+
+- name: Administracion servicios - LDAP
+  hosts: 'ldap-testing'
+  
+  vars_files:
+    - roles/general_defaults/variables_roles.yml
+    - roles/alta-baja-cuenta/defaults/main.yml
+
+  tasks:
+    # Si es BAJA
+    - block:
+      - name: set username [ldap]
+        set_fact:
+          username: "{{variables_roles.baja_cuenta.username}}"
+          personal: "{{variables_roles.alta_cuenta.personal}}"
+          from_mail: true
+
+      - name: incluyo
+        include: 
+          file: "../ansible-ldap/roles/general_tasks/disable_mailHomeDir.yml"
+      when:  
+        - variables_roles.baja_cuenta.username is defined
+        - variables_roles.baja_cuenta.username != ""
+# ====================================================================
+
+

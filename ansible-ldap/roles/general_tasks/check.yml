@@ -1,0 +1,28 @@
+   
+  # Devuelve el dn completo
+- name: Busco usuario en ramas
+  shell: ldapsearch  -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b  "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(&(objectclass=posixAccount)(uid={{username}}))" dn | grep "dn:"
+  register: encontrado
+  # Busco que de error, significa que el usuario no existe
+  # encontrado != 0 ==> error (significa que no existe en el arbol)
+  ignore_errors: true   
+  args:
+    executable: /bin/bash
+  when: 
+    - username is defined
+    - username != ''
+
+
+  # Devuelve el dn completo
+- name: Busco grupo en ramas
+  shell: ldapsearch  -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b  "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(&(objectclass=posixGroup)(cn={{groupname}}))" dn | grep "dn:" | grep "{{delegacion}}"
+  register: grupo_encontrado
+  # Busco que de error, significa que el grupo no existe
+  ignore_errors: true   
+  args:
+    executable: /bin/bash
+  when: 
+    - groupname is defined
+    - groupname != ''
+    - delegacion is defined
+    - delegacion != ''

@@ -1,0 +1,58 @@
+---
+# tasks file for ansible-ldap_asignar_grupos
+
+  - name: Registro variables locales
+    set_fact:
+      username: "{{variables_roles.ldap_asignar_grupos.username}}"
+      when: 
+        - variables_roles.ldap_asignar_grupos.username != ''
+
+  - name: incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  - name: Agrego secundarios ldap
+    command: smbldap-groupmod -m {{username}} {{item}}
+    ignore_errors: true   
+    with_items: "{{ variables_roles.ldap_asignar_grupos.grupos.secundarios }}"
+    when: 
+      - variables_roles.ldap_asignar_grupos.grupos.secundarios is defined 
+      - (variables_roles.ldap_asignar_grupos.grupos.secundarios | length > 0)
+
+  - name: Quito secundarios ldap
+    command: smbldap-groupmod -x {{username}} {{item}}
+    ignore_errors: true   
+    with_items: "{{ variables_roles.ldap_asignar_grupos.grupos.quitar_secundarios }}"
+    when: 
+      - variables_roles.ldap_asignar_grupos.grupos.quitar_secundarios is defined 
+      - (variables_roles.ldap_asignar_grupos.grupos.quitar_secundarios | length > 0)
+  
+
+  - name:
+    block:
+
+      - name: Busco gid del sector
+        shell: ldapsearch  -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b  "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(&(objectclass=posixGroup)(cn={{variables_roles.ldap_asignar_grupos.grupos.sector}}))" gidNumber | grep -A1 "{{variables_roles.ldap_asignar_grupos.delegacion}}" | grep "gidNumber:"
+        register: gidNumber_encontrado
+        # Busco que de error, significa que el grupo no existe
+        ignore_errors: true   
+        args:
+          executable: /bin/bash
+
+      - name: Modifico parametro
+        ldap_attr:
+          params: "{{ ldap_auth }}"
+          dn: "{{ encontrado.stdout.split(' ')[1] }}"
+          name: gidNumber
+          values: "{{ gidNumber_encontrado.stdout.split(' ')[1] }}"
+          state: exact
+        when: 
+          - gidNumber_encontrado.stdout != ''
+
+
+  - name: incluyo post tareas
+    include_tasks: ../../general_tasks/post.yml
+    ignore_errors: true   
+  

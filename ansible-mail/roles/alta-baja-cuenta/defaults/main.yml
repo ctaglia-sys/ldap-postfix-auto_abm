@@ -1,0 +1,13 @@
+---
+# defaults file for alta-cuenta
+user_mail_path: usuarios 
+
+
+# ldap_server: "ldap-server.issys.gov.ar"
+ldap_server: "ldap-testing"
+
+bind_dn: 
+bind_pw: 
+ldap_auth:
+  bind_dn: "{{ bind_dn }}"
+  bind_pw: "{{ bind_pw }}"

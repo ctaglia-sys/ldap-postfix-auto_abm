@@ -1,0 +1,59 @@
+---
+
+  - name: Registro variables locales
+    set_fact:
+      username: "{{variables_roles.ldap_baja_usuario.username}}"
+      when: 
+        - variables_roles.ldap_baja_usuario.username != ''
+
+  - name: Incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: Incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  # - debug: msg="{{ encontrado.stdout.split(" ")[1] }}"
+  #   when: encontrado.rc == 0
+
+  - name: Elimino el usuario
+    ldap_entry:
+      params: "{{ ldap_auth }}"
+      dn: "{{ encontrado.stdout.split(' ')[1] }}"
+      state: absent
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc == 0 
+      - variables_roles.ldap_baja_usuario.borrar
+
+  - name: no_elimino
+    debug: msg="No se encontro el usuario a eliminar"
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc == 0
+
+  - name: Des habilito el usuario
+    ldap_attr:
+      params: "{{ ldap_auth }}"
+      dn: "{{ encontrado.stdout.split(' ')[1] }}"
+      name: loginShell
+      values: '/sbin/nologin'
+      state: exact
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc == 0 
+      - not variables_roles.ldap_baja_usuario.borrar    
+
+  - name: des-habilito
+    debug: msg="Se deshabilito el usuario {{username}}"
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc == 0
+      - not variables_roles.ldap_baja_usuario.borrar
+    
+  - name: incluyo post tareas
+    include_tasks: ../../general_tasks/post.yml
+    ignore_errors: true   

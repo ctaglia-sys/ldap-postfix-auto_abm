@@ -1,0 +1,8 @@
+
+ldap_server: "{{ ansible_host }}"
+
+bind_dn: 
+bind_pw: 
+ldap_auth:
+  bind_dn: "{{ bind_dn }}"
+  bind_pw: "{{ bind_pw }}"

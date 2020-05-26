@@ -1,0 +1,33 @@
+# Explicativo del uso de las variables
+
+variables_roles:
+  ldap_alta_grupo:
+    delegacion: 
+    description: 
+    groupname: 
+  ldap_alta_usuario:
+    apellido_y_nombre: 
+    delegacion: 
+    grupo_sector: 
+    # obligatorio: NO
+    # Se usa false cuando quiero que un usuario no se pueda loguear en la terminal
+    # Se usa true cuando quiero que un usuario se pueda loguear en la terminal
+    habilitar: true || false
+    username: 
+    personal: true || false
+  ldap_asignar_grupos:
+    delegacion: 
+    grupos:
+      quitar_secundarios: []
+      sector: 
+      secundarios: []
+    username: 
+  ldap_baja_grupo:
+    delegacion: 
+    groupname: 
+  ldap_baja_usuario:
+    borrar: true || false
+    username: 
+  ldap_password:
+    password: 
+    username: 

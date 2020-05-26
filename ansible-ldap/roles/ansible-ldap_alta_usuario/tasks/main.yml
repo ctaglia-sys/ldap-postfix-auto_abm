@@ -1,0 +1,143 @@
+---
+  
+  - name: Registro variables locales
+    set_fact:
+      username: "{{variables_roles.ldap_alta_usuario.username}}"
+      when: 
+        - variables_roles.ldap_alta_usuario.username != ''
+
+  - name: incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  # - debug: msg="{{ encontrado.rc }}"
+
+  - name: Habilito usuario para login
+    ldap_attr:
+      params: "{{ ldap_auth }}"
+      dn: "{{ encontrado.stdout.split(' ')[1] }}"
+      name: loginShell
+      values: '/bin/bash'
+      state: exact
+    when: 
+      - grupo_encontrado is defined
+      - grupo_encontrado.rc is defined
+      - encontrado.rc == 0 
+      - variables_roles.ldap_alta_usuario.habilitar is defined 
+      - variables_roles.ldap_alta_usuario.habilitar
+
+  - name: Obtengo el siguiente uid libre de usuario
+    shell: 'echo $( expr $(ldapsearch -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b \
+           "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(objectclass=posixAccount)" uidNumber \
+           | grep uidNumber\: \
+           | cut -d  " " -f2 \
+           | sort -nu \
+           | tail -n1) + 1)'
+    register: siguiente_uid_libre
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc != 0
+
+  # - debug: msg="{{ siguiente_uid_libre }}"
+  #   # Cuando no encontre usuario
+  #   # when: encontrado.rc != 0
+
+  - name: Busco GID de sector
+    shell: ldapsearch -H ldap://{{ldap_server}} -o ldif-wrap=no -x -b "ou={{variables_roles.ldap_alta_usuario.delegacion}},dc=ldap-server,dc=issys,dc=gov,dc=ar" '(&(objectclass=posixGroup)(cn={{variables_roles.ldap_alta_usuario.grupo_sector}}))' gidNumber | grep "gidNumber\:" | awk '{print $2}'
+    register: gid_sector
+    args:
+      executable: /bin/bash
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc != 0
+
+  # - name: GID
+  #   debug: msg={{( (gid_sector | length > 0) | ternary(gid_sector | "1000" ) ) }}
+
+  - name: cuenta personal
+    set_fact:
+      mail_home_dir: 'usuarios'
+    when:  
+      - variables_roles.ldap_alta_usuario.personal is defined
+      - variables_roles.ldap_alta_usuario.personal
+
+  - name: cuenta no_personal
+    set_fact:
+      mail_home_dir: 'correos_no_personales'
+    when:  
+      - variables_roles.ldap_alta_usuario.personal is defined
+      - not variables_roles.ldap_alta_usuario.personal
+    
+  - block:
+    - name: inserto usuario ldap
+      ldap_entry:
+        params: "{{ ldap_auth }}"
+        dn: uid={{username}},ou=usuarios,ou={{variables_roles.ldap_alta_usuario.delegacion}},dc=ldap-server,dc=issys,dc=gov,dc=ar
+        objectClass: 
+          - top
+          - person
+          - organizationalPerson
+          - inetOrgPerson
+          - posixAccount
+          - postfixUser
+          - shadowAccount
+          - sambaSamAccount
+        attributes:
+          cn: "{{variables_roles.ldap_alta_usuario.apellido_y_nombre}}"
+          sn: "{{variables_roles.ldap_alta_usuario.apellido_y_nombre}}"
+          uid: "{{username}}"
+          uidNumber: "{{siguiente_uid_libre.stdout}}"
+          gidNumber: "{{ (gid_sector.stdout | length > 0) | ternary( gid_sector.stdout, default_gid) }}"
+          displayName: "{{variables_roles.ldap_alta_usuario.apellido_y_nombre}}"
+          givenName: "{{variables_roles.ldap_alta_usuario.apellido_y_nombre}}"
+          gecos: "{{variables_roles.ldap_alta_usuario.apellido_y_nombre}},,,,"
+          homeDirectory: /home/users/{{username}}
+          loginShell: /bin/bash
+          mail: "{{username}}@issys.gov.ar"
+          mailDomain: "{{username}}@issys.gob.ar"
+          mailHomeDir: /produccion/{{mail_home_dir}}/{{username}}
+          telephoneNumber: 0
+          # sambaSID: "{{ sambaSID[delegacion] | default(sambaSID['rawson'])}}"
+          sambaSID: "{{ sambaSID[variables_roles.ldap_alta_usuario.delegacion] | default('')}}"
+          sambaAcctFlags: [U]
+          sambaKickoffTime: 2147483647
+          sambaLMPassword: 19FE4717A7C8B55DAAD3B435B51404EE
+          sambaLogoffTime: 2147483647
+          sambaLogonTime: 0
+          sambaNTPassword: F2C0C177DE720154D024A26E09F0FEB3
+          sambaPwdCanChange: 0
+          sambaPwdLastSet: 1456146003
+          sambaPwdMustChange: 1460034003
+          shadowLastChange: -1
+          shadowMax: -1
+          userPassword: 'e1NTSEF9d3FiVjJMem1XalNZU3dXemgzS29SSk11cU9zdlZHaHU='
+      when: 
+        - encontrado is defined
+        - encontrado.rc is defined
+        - encontrado.rc != 0            # encontrado != 0 ==> significa que no existe en el arbol
+        - gid_sector is defined 
+        - siguiente_uid_libre is defined 
+
+    # Esta tarea se da cuando quiero 'crear la cuenta' pero ya existe pero 
+    # 
+    - name: flag mailHomeDir
+      set_fact:
+        path: "/produccion/{{mail_home_dir}}/{{username}}"
+      when: 
+        - encontrado.rc is defined
+        - encontrado.rc == 0
+          
+    - name: Habilito flag mailHomeDir
+      include_tasks: ../../general_tasks/disable_mailHomeDir.yml
+      when: 
+        - encontrado.rc is defined
+        - encontrado.rc == 0
+
+
+  - name: incluyo post tareas
+    include_tasks: ../../general_tasks/post.yml
+    ignore_errors: true   

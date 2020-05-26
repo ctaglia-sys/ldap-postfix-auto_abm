@@ -1,0 +1,32 @@
+---
+
+# # tasks file for alta_baja_listas_correo
+
+
+  - name: Alta en listas de correo
+    shell: "echo {{variables_roles.listas.username}}@issys.gov.ar | add_members -n - {{item}} "
+    args:
+      executable: /bin/bash
+    with_items: "{{variables_roles.listas.suscribir}}"
+    when: 
+      - variables_roles.listas.username is defined
+      - variables_roles.listas.username != ""
+      - variables_roles.listas.suscribir != none
+      - (variables_roles.listas.suscribir | length > 0)
+      - not variables_roles.listas.baja_masiva
+
+
+  - name: Baja en listas de correo
+    shell: "remove_members {{item}} {{variables_roles.listas.username}}@issys.gov.ar"
+    args:
+      executable: /bin/bash
+    with_items: "{{variables_roles.listas.desuscribir}}"
+    when: (variables_roles.listas.desuscribir | length > 0)
+
+
+  - name: Baja de toda lista de correo
+    shell: "/usr/lib/mailman/bin/remove_members --fromall {{variables_roles.listas.username}}@issys.gov.ar"
+    args:
+      executable: /bin/bash
+    when: (variables_roles.listas.baja_masiva)
+  

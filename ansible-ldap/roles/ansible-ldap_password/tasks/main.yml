@@ -1,0 +1,25 @@
+---
+  - name: Registro variables locales
+    set_fact:
+      username: "{{variables_roles.ldap_password.username}}"
+      when: 
+        - variables_roles.ldap_password.username != ''
+
+  - name: Incluyo variables generales
+    include_vars: ../../general_defaults/main.yml
+
+  - name: Incluyo tareas generales
+    include_tasks: ../../general_tasks/check.yml
+
+  - name: Set a password 
+    ldap_passwd:
+      # params: "{{ ldap_auth }}"
+      bind_dn: "{{ bind_dn }}"
+      bind_pw: "{{ bind_pw }}"
+      dn: "{{ encontrado.stdout.split(' ')[1] }}"
+      passwd: "{{variables_roles.ldap_password.password}}"
+    when: 
+      - encontrado is defined
+      - encontrado.rc is defined
+      - encontrado.rc == 0  
+      - variables_roles.ldap_password.password != ''

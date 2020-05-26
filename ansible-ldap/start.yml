@@ -1,0 +1,67 @@
+
+- name: -- LDAP --
+  # El/los host/s deben definirse en /etc/ansible/host
+  # El ssh ya debe tener el "yes" aceptado previamente antes 
+  # de tirar el playbook 
+  # Una prueba en linea de comandos: ansible -m ping [host]
+  # 
+  # hosts: 'ldap_server'
+  hosts: 'ldap_testing'
+  vars_files: 
+    - roles/general_defaults/variables_roles.yml
+
+  tasks:
+
+    # alta grupo va primero, porque si quiero crear un grupo
+    # para que luego sea asignado a un nuevo usuario. 
+    # Primero debe existir el grupo
+
+    - name: "-include_role- ansible-ldap_alta_grupo"
+      include_role:
+        name: ansible-ldap_alta_grupo
+      when: 
+        - variables_roles.ldap_alta_grupo.groupname 
+        - variables_roles.ldap_alta_grupo.delegacion 
+        - variables_roles.ldap_alta_grupo.description 
+# ====================================================================
+    
+    - name: "-include_role- ansible-ldap_alta_usuario"
+      include_role:
+        name: ansible-ldap_alta_usuario
+      when:
+        - variables_roles.ldap_alta_usuario.apellido_y_nombre
+        - variables_roles.ldap_alta_usuario.delegacion
+        - variables_roles.ldap_alta_usuario.grupo_sector
+        - variables_roles.ldap_alta_usuario.habilitar != ''
+        - variables_roles.ldap_alta_usuario.username
+        - variables_roles.ldap_alta_usuario.personal != ''
+
+# ====================================================================
+    - name: "-include_role- ansible-ldap_password"
+      include_role:
+        name: ansible-ldap_password
+      when:
+        - variables_roles.ldap_password.username
+        - variables_roles.ldap_password.password
+# # ====================================================================
+    - name: "-include_role- ansible-ldap_asignar_grupos"
+      include_role:
+        name: ansible-ldap_asignar_grupos
+      when:
+        - variables_roles.ldap_asignar_grupos.delegacion
+        - variables_roles.ldap_asignar_grupos.username
+# # ====================================================================
+    # #  Bajas  
+    - name: "-include_role- ansible-ldap_baja_usuario"
+      include_role:
+        name: ansible-ldap_baja_usuario
+      when:
+        - variables_roles.ldap_baja_usuario.borrar != ''
+        - variables_roles.ldap_baja_usuario.username
+# # ====================================================================
+    - name: "-include_role- ansible-ldap_baja_grupo"
+      include_role:
+        name: ansible-ldap_baja_grupo
+      when:
+        - variables_roles.ldap_baja_grupo.delegacion
+        - variables_roles.ldap_baja_grupo.groupname

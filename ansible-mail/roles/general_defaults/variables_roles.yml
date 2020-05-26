@@ -1,0 +1,21 @@
+variables_roles:
+  alta_cuenta:
+    personal: 
+    username: 
+  baja_cuenta:
+    personal: 
+    username: 
+  listas:
+    baja_masiva: true
+    desuscribir: []
+    suscribir: []
+    username: 
+  vacaciones:
+    alta:
+      mensaje: 
+      personal: 
+      subject: 
+      username: 
+    baja:
+      personal: 
+      username: 

@@ -1,0 +1,28 @@
+variables_roles:
+  ldap_alta_grupo:
+    delegacion: 
+    description: 
+    groupname: 
+  ldap_alta_usuario:
+    apellido_y_nombre: 
+    delegacion: 
+    grupo_sector: 
+    habilitar: 
+    personal: 
+    username: 
+  ldap_asignar_grupos:
+    delegacion: 
+    grupos:
+      quitar_secundarios: []
+      sector: 
+      secundarios: []
+    username: 
+  ldap_baja_grupo:
+    delegacion: 
+    groupname: 
+  ldap_baja_usuario:
+    borrar: 
+    username: 
+  ldap_password:
+    password: 
+    username: 

@@ -1,0 +1,48 @@
+---
+  - name: busco DN del usuario
+    # Devuelve el dn completo
+    shell: ldapsearch  -H ldap://localhost -o ldif-wrap=no -x -b  "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(&(objectclass=posixAccount)(uid={{username}}))" dn | grep "dn:"
+    # shell: ldapsearch  -H ldap://localhost -o ldif-wrap=no -x -b  "dc=ldap-server,dc=issys,dc=gov,dc=ar" "(&(objectclass=posixAccount)(uid={{variables_roles.baja_cuenta.username}}))" dn | grep "dn:"
+    register: encontrado
+    ignore_errors: true   
+    args:
+      executable: /bin/bash
+    when: 
+      - username is defined
+      - username != ""
+
+
+  - name: seteo el path solo si me llaman del mailserver
+    set_fact:
+      path: /produccion/usuarios/{{username}}
+    when:
+      - encontrado.rc is defined
+      - encontrado.rc == 0
+      - from_mail is defined
+      - from_mail
+      - personal is defined
+      - personal
+
+  - name: seteo el path solo si me llaman del mailserver
+    set_fact:
+      path: /produccion/correos_no_personales/{{username}}
+    when:
+      - encontrado.rc is defined
+      - encontrado.rc == 0
+      - from_mail is defined
+      - from_mail
+      - not personal is defined
+      - not personal
+
+
+  - name: deshabilito mailHomeDir
+    ldap_attr:
+      params: "{{ ldap_auth }}"
+      dn: "{{ encontrado.stdout.split(' ')[1] }}"
+      name: mailHomeDir
+      values: "{{ path | default('null')}}"
+      state: exact
+    when: 
+      - encontrado.rc is defined
+      - encontrado.rc == 0
+

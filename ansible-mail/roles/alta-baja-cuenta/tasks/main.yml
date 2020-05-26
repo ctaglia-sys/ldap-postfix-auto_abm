@@ -1,0 +1,99 @@
+---
+  - name: check - usuario existe
+    command: "id {{variables_roles.alta_cuenta.username}}"
+    register: usuario_existe
+    when:
+      - variables_roles.alta_cuenta.username != ''
+
+  - name: check - no existe casilla
+    shell: test -d /produccion/usuarios/{{variables_roles.alta_cuenta.username}} || test -d /produccion/correos_no_personales/{{variables_roles.alta_cuenta.username}} 
+    ignore_errors: true
+    args:
+      executable: /bin/bash
+    register: maildir_existe
+    when: 
+      - usuario_existe.rc is defined
+      - usuario_existe.rc == 0
+  
+  # -------------
+  # Alta Casilla
+  # -------------
+  - name: Alta Casilla
+    block:
+      - name: Name for set_fact module.
+        set_fact:
+          user_mail_path: correos_no_personales
+        when: variables_roles.alta_cuenta.personal == false
+    
+      - name: Carpetas Maildir
+        file:
+          path: "{{ item }}"
+          state: directory
+          mode: 0700
+          group: spamd
+          owner: "{{variables_roles.alta_cuenta.username}}"
+          owner: "{{variables_roles.alta_cuenta.username}}"
+        with_items:
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/.Drafts"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/.Junk"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/.Trash"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/.SPAM"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/cur"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/new"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/Maildir/tmp"
+          - "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/sieve"
+
+      - name: sieve
+        copy:
+          src: "main script.sieve"
+          dest: /produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}/sieve/
+          mode: 0600
+          group: spamd
+          owner: "{{ variables_roles.alta_cuenta.username }}"
+
+      - name: solo para no correos_no_personales
+        file: 
+          src: "/produccion/{{user_mail_path}}/{{variables_roles.alta_cuenta.username}}"
+          dest: "/home/users/{{variables_roles.alta_cuenta.username}}"
+          state: link
+        when: 
+          - variables_roles.alta_cuenta.personal == false
+      
+    when: 
+      - usuario_existe.rc == 0  # existe usuario en ldap
+      - maildir_existe.rc != 0  # no existe la casilla
+      - variables_roles.alta_cuenta.username is defined
+      - variables_roles.alta_cuenta.username != ''
+
+  # -------------
+  # Baja Casilla
+  # -------------
+  - name: Baja Casilla
+    block:
+      # No borramos las casillas. Las hacemos root owner
+      # y deshabilitamos el flag "mailHomeDir" en ldap
+      - name: Name for set_fact module.
+        set_fact:
+          user_mail_path: correos_no_personales
+        when: "variables_roles.alta_cuenta.personal == false"
+
+      - name: owner root
+        file:
+          path: "/produccion/{{user_mail_path}}/{{variables_roles.baja_cuenta.username}}"
+          owner: root
+          group: root
+          mode: 0600
+        ignore_errors: true
+
+      - name: Cambio la conexion al server LDAP
+        set_fact:
+          ansible_host: "{{ ldap_server }}"
+
+      # - name: ldap_server
+      #   debug:
+      #    msg: "{{ldap_server}}"
+         
+    when:
+      - variables_roles.baja_cuenta.username
+      - variables_roles.baja_cuenta.personal is defined
+

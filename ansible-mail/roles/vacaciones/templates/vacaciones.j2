@@ -1,0 +1,12 @@
+require ["vacation"];
+if header :contains "X-Spam-Flag" "YES" {
+  stop;
+}
+vacation
+  # Reply at most once a day to a same sender
+  :days 1
+  :subject "{{ variables_roles.vacaciones.alta.subject }}"
+
+"
+{{ variables_roles.vacaciones.alta.mensaje }}
+";
